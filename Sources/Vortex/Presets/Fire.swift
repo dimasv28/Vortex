@@ -21,7 +21,7 @@ extension VortexSystem {
             attractionStrength: 2,
             colors: .ramp(.brown, .brown, .brown, .brown.opacity(0)),
             sizeVariation: 0.5,
-            sizeMultiplierAtDeath: 0.1
+            sizeOverLife: [1, 0.1]
         )
     }()
 }

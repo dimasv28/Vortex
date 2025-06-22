@@ -195,7 +195,6 @@ The `VortexSystem` initializer parameters are:
 - `colors` (`ColorMode`, defaults to `.single(.white)`) determines how particles should be colored over time.
 - `size` (`Double`, defaults to 1) determines how big particles should be compared to their source view, where 1 is 100% the original size.
 - `sizeVariation` (`Double`, defaults to 0) determines how much variation to allow in initial particle size, +/- the base `size` value.
-- `sizeMultiplierAtDeath` (`Double`, defaults to 1) determines how much bigger or smaller particles should be by the time they are destroyed. A value of 1 means the size won't change, whereas a value of 0.5 means particles will be half whatever their initial size was.
 - `stretchFactor` (`Double`, defaults to 1) determines whether particles should be stretched based on their movement speed. A value of 1 means no stretch is applied.
 
 Most of those are built-in types, but two deserve extra explanation.
@@ -204,9 +203,9 @@ First, `Shape` allows you to emit particles from a range of shapes: a single poi
 
     .box(width: 1, height: 0)
 
-And this creates particles in an ellipse half the size of the available space:
+And this creates particles in an circle with radius in points:
 
-    .ellipse(radius: 0.5)
+    .circle(radius: 50)
 
 Second, `ColorMode` gives you fine-grained control over how colors work with Vortex. The default value for new particle system is `.single(.white)`, which means all particles are created white. However, you can create particles in a range of static colors like this:
 

@@ -20,7 +20,7 @@ extension VortexSystem {
             colors: .ramp(.gray, .gray.opacity(0)),
             size: 0.5,
             sizeVariation: 0.5,
-            sizeMultiplierAtDeath: 2
+            sizeOverLife: [1, 2]
         )
     }()
 }

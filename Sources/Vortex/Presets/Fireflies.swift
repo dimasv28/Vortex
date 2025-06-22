@@ -13,7 +13,7 @@ extension VortexSystem {
     public static let fireflies: VortexSystem = {
         VortexSystem(
             tags: ["circle"],
-            shape: .ellipse(radius: 0.5),
+            shape: .circle(radius: 50),
             birthRate: 200,
             lifespan: 2,
             speed: 0,
@@ -21,7 +21,7 @@ extension VortexSystem {
             angleRange: .degrees(360),
             colors: .ramp(.yellow, .yellow, .yellow.opacity(0)),
             size: 0.01,
-            sizeMultiplierAtDeath: 100
+            sizeOverLife: [1, 100]
         )
     }()
 }

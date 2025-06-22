@@ -22,7 +22,7 @@ extension VortexSystem {
             colors: .random(.red, .pink, .orange, .blue, .green, .white),
             size: 0.5,
             sizeVariation: 0.5,
-            sizeMultiplierAtDeath: 0.01
+            sizeOverLife: [1, 0.01]
         )
     }()
 }

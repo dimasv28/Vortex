@@ -34,6 +34,7 @@ extension VortexSystem {
     ///   - colors: The array of `SwiftUI.Color` to randomize in the confetti.
     ///   - environment: reference to `@Environment(\.self)`
     /// - Returns: an instance of `VortexSystem` to pass into the VortexView
+    @available(iOS 17.0, *)
     @available(macOS 14.0, *)
     public static func confetti(
         colors: [SwiftUI.Color],

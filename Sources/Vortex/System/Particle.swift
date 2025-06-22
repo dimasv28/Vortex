@@ -45,5 +45,9 @@ extension VortexSystem {
         /// The current color to use for rendering this particle right now. This is recomputed
         /// every time its system's `update()` method is called.
         var currentColor = Color.white
+        
+        /// Accumulated noise angle (radians) for smooth, continuous directional variation
+        /// over the particle's lifetime. Usefull for speedDistribution
+        var directionalNoiseAngle: Double = 0
     }
 }

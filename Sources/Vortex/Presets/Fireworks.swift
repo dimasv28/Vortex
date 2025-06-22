@@ -42,7 +42,7 @@ extension VortexSystem {
             ),
             size: 0.15,
             sizeVariation: 0.1,
-            sizeMultiplierAtDeath: 0
+            sizeOverLife: [1, 0]
         )
 
         let mainSystem = VortexSystem(

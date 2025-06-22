@@ -36,12 +36,8 @@ extension VortexSystem {
 
         var attractionUnitPoint: SIMD2<Double>?
 
-        // Push attraction strength down to a small number, otherwise
-        // it's much too strong.
-        let adjustedAttractionStrength = attractionStrength / 1000
-
         if let attractionCenter {
-            attractionUnitPoint = [attractionCenter.x / drawSize.width, attractionCenter.y / drawSize.height]
+            attractionUnitPoint = [attractionCenter.x, attractionCenter.y]
         }
 
         particles = particles.compactMap {
@@ -59,14 +55,14 @@ extension VortexSystem {
 
                     // Increase the magnitude the closer we get, adding a small
                     // amount to avoid a slingshot / over-attraction.
-                    let movementMagnitude = adjustedAttractionStrength / (distance * distance + 0.0025)
+                    let movementMagnitude = attractionStrength / (distance * distance + 0.0025)
                     let movement = normalized * movementMagnitude * delta
                     particle.position += movement
                 }
             }
 
             // Update particle position
-            particle.position.x += particle.speed.x * delta * drawDivisor
+            particle.position.x += particle.speed.x * delta
             particle.position.y += particle.speed.y * delta
 
             if dampingFactor != 1 {
@@ -75,15 +71,36 @@ extension VortexSystem {
             }
 
             particle.speed += acceleration * delta
+            
+            if speedDistribution > 0 {
+                let noiseStrength = speedDistribution * 2.0
+                particle.directionalNoiseAngle += Double.random(in: -1...1) * noiseStrength * delta
+                let c = cos(particle.directionalNoiseAngle)
+                let s = sin(particle.directionalNoiseAngle)
+                let newX = particle.speed.x * c - particle.speed.y * s
+                let newY = particle.speed.x * s + particle.speed.y * c
+                particle.speed = SIMD2(newX, newY)
+            }
+            
             particle.angle += particle.angularSpeed * delta
 
             particle.currentColor = particle.colors.lerp(by: lifeProgress)
-
-            particle.currentSize = particle.initialSize.lerp(
-                to: particle.initialSize * sizeMultiplierAtDeath,
-                amount: lifeProgress
-            )
-
+            
+            if !opacityOverLife.isEmpty {
+                let opacityFactor = opacityOverLife.interpolated(at: lifeProgress)
+                particle.currentColor = particle.currentColor.opacity(opacityFactor)
+            }
+            
+            if sizeOverLife.isEmpty {
+                particle.currentSize = particle.initialSize.lerp(
+                    to: particle.initialSize,
+                    amount: lifeProgress
+                )
+            } else {
+                let sizeFactor = sizeOverLife.interpolated(at: lifeProgress)
+                particle.currentSize = particle.initialSize * sizeFactor
+            }
+            
             if age >= particle.lifespan {
                 spawn(from: particle, event: .onDeath)
                 return nil
@@ -137,11 +154,21 @@ extension VortexSystem {
         let lifespan = lifespan + lifespanVariation.randomSpread()
         let size = size + sizeVariation.randomSpread()
         let particlePosition = getNewParticlePosition()
+        
+        // Compute emitter orbital velocity (perpendicular to orbit radius)
+        let orbitalAngle = orbitAngularSpeed * lastUpdate + orbitInitialAngle
+        let emitterVelocity = SIMD2(
+            x: -orbitAngularSpeed * orbitRadius * sin(orbitalAngle),
+            y:  orbitAngularSpeed * orbitRadius * cos(orbitalAngle)
+        )
 
-        let speed = SIMD2(
+        var speed = SIMD2(
             cos(launchAngle) * launchSpeed,
             sin(launchAngle) * launchSpeed
         )
+
+        // Add fraction of emitter motion
+        speed += emitterVelocity * speedFromMotion
 
         let spinSpeed = angularSpeed + angularSpeedVariation.randomSpread()
         let colorRamp = getNewParticleColorRamp()
@@ -193,10 +220,10 @@ extension VortexSystem {
                 position.y + height.randomSpread()
             ]
 
-        case .ellipse(let radius):
+        case .circle(let radius):
             let angle = Double.random(in: 0...(2 * .pi))
-            let placement = Double.random(in: 0...radius / 2)
-
+            let placement = sqrt(Double.random(in: 0...1)) * radius
+            
             return [
                 placement * cos(angle) + position.x,
                 placement * sin(angle) + position.y
@@ -215,20 +242,37 @@ extension VortexSystem {
     func getNewParticleColorRamp() -> [Color] {
         switch colors {
         case .single(let color):
-            return [color]
-
+            return [color.randomized(
+                colorVariation: colorVariation,
+                opacityVariation: opacityVariation
+            )]
+            
         case .random(let colors):
             if let randomColor = colors.randomElement() {
-                return [randomColor]
+                return [randomColor.randomized(
+                    colorVariation: colorVariation,
+                    opacityVariation: opacityVariation
+                )]
             } else {
                 return [.white]
             }
-
+            
         case .ramp(let colors):
-            return colors
-
-        case .randomRamp(let colors):
-            return colors[selectedColorRamp]
+            return colors.map {
+                $0.randomized(
+                    colorVariation: colorVariation,
+                    opacityVariation: opacityVariation
+                )
+            }
+            
+        case .randomRamp(let colorRamps):
+            let selectedRamp = colorRamps[selectedColorRamp]
+            return selectedRamp.map {
+                $0.randomized(
+                    colorVariation: colorVariation,
+                    opacityVariation: opacityVariation
+                )
+            }
         }
     }
 }

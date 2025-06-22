@@ -14,15 +14,15 @@ extension VortexSystem {
         case point
 
         /// Particles are created somewhere inside a box measuring `width` x `height`.
-        /// This values are specified in unit space.
+        /// These values are specified in unit space.
         case box(width: Double, height: Double)
-
-        /// Particles are created somewhere inside an ellipse measuring `radius`, which
-        /// is specified in unit space.
-        case ellipse(radius: Double)
-
-        /// Particles are created somewhere along the edge of an ellipse measuring `radius`,
-        /// which is specified in unit space.
+        
+        /// Particles are created somewhere inside a circle of `radius`,
+        /// specified in unit space.
+        case circle(radius: Double)
+        
+        /// Particles are created somewhere along the edge of a circle of `radius`,
+        /// specified in unit space.
         case ring(radius: Double)
     }
 }

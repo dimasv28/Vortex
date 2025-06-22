@@ -14,7 +14,8 @@ public class VortexSystem: Codable, Identifiable, Equatable, Hashable {
         case tags, secondarySystems, spawnOccasion, position, shape, birthRate, emissionLimit, emissionDuration
         case idleDuration, burstCount, burstCountVariation, lifespan, lifespanVariation, speed, speedVariation, angle
         case angleRange, acceleration, attractionCenter, attractionStrength, dampingFactor, angularSpeed
-        case angularSpeedVariation, colors, size, sizeVariation, sizeMultiplierAtDeath, stretchFactor
+        case angularSpeedVariation, colors, size, sizeVariation, stretchFactor
+        case sizeOverLife, opacityOverLife, speedDistribution, speedFromMotion, orbitRadius, orbitAngularSpeed, orbitInitialAngle, colorVariation, opacityVariation
     }
 
     /// A public identifier  to satisfy Identifiable.
@@ -119,6 +120,13 @@ public class VortexSystem: Codable, Identifiable, Equatable, Hashable {
 
     /// How much variation to allow in particle speed.
     public var speedVariation: Double
+    
+    /// Normalized spread of initial velocity direction (0 = no spread, 1 = maximum spread).
+    public var speedDistribution: CGFloat = 0.0
+    
+    /// How much of the emitter's motion is inherited by new particles.
+    /// 0 means no emitter motion is transferred; 1 means full emitter motion is added to particle velocity.
+    public var speedFromMotion: Double = 0.0
 
     /// The base direction to launch new particles, where 0 is directly up.
     public var angle: Angle
@@ -163,15 +171,34 @@ public class VortexSystem: Codable, Identifiable, Equatable, Hashable {
     /// How much variation to use for particle size.
     public var sizeVariation: Double
 
-    /// How how much bigger or smaller this particle should be by the time it is removed.
-    /// This is used as a multiplier based on the particle's initial size, so if it starts at size
-    /// 0.5 and has a `sizeMultiplierAtDeath` of 0.5, the particle will finish
-    /// at size 0.25.
-    public var sizeMultiplierAtDeath: Double
+    /// An array that defines how particle size should change over its lifespan (0...1).
+    public var sizeOverLife: [Double] = []
+
+    /// An array that defines how particle opacity should change over its lifespan (0...1).
+    public var opacityOverLife: [Double] = []
 
     /// How much to stretch this particle's image based on its movement speed. Larger values
     /// cause more stretching.
     public var stretchFactor: Double
+    
+    /// The radius of the orbit path that the entire system follows. Set to 0 to disable orbiting.
+    public var orbitRadius: CGFloat = 0
+
+    /// The angular speed (in radians per second) for the system's orbit movement.
+    public var orbitAngularSpeed: CGFloat = 0
+
+    /// The initial angle (in radians) at which the system starts on its orbit.
+    public var orbitInitialAngle: CGFloat = 0
+    
+    /// Amount of random variation applied to particle color at birth.
+    /// A value of 0 disables variation.
+    /// Typical range: 0...0.2.
+    public var colorVariation: Double = 0
+
+    /// Amount of random opacity reduction applied at birth.
+    /// For example, opacityVariation=0.28 means final opacity will vary in [0.72, 1].
+    /// A value of 0 disables variation.
+    public var opacityVariation: Double = 0
 
     /// Creates a new particle system. Most values here have sensible defaults, but you do need
     /// to provide a list of tags matching whatever you're using with `VortexView`.
@@ -228,10 +255,6 @@ public class VortexSystem: Codable, Identifiable, Equatable, Hashable {
     ///   - size: How large particles should be drawn, where a value of 1 means 100%
     ///     the image size. Defaults to 1.
     ///   - sizeVariation: How much variation to use for particle size. Defaults to 0
-    ///   - sizeMultiplierAtDeath: How how much bigger or smaller this particle should
-    ///     be by the time it is removed. This is used as a multiplier based on the particle's initial
-    ///     size, so if it starts at size 0.5 and has a `sizeMultiplierAtDeath` of 0.5, the
-    ///     particle will finish at size 0.25. Defaults to 1.
     ///   - stretchFactor: How much to stretch this particle's image based on its movement
     ///     speed. Larger values cause more stretching. Defaults to 1 (no stretch).
     public init(
@@ -250,6 +273,8 @@ public class VortexSystem: Codable, Identifiable, Equatable, Hashable {
         lifespanVariation: TimeInterval = 0,
         speed: Double = 1,
         speedVariation: Double = 0,
+        speedDistribution: CGFloat = 0.0,
+        speedFromMotion: Double = 0,
         angle: Angle = .zero,
         angleRange: Angle = .zero,
         acceleration: SIMD2<Double> = [0, 0],
@@ -261,8 +286,14 @@ public class VortexSystem: Codable, Identifiable, Equatable, Hashable {
         colors: ColorMode = .single(.white),
         size: Double = 1,
         sizeVariation: Double = 0,
-        sizeMultiplierAtDeath: Double = 1,
-        stretchFactor: Double = 1
+        sizeOverLife: [Double] = [],
+        opacityOverLife: [Double] = [],
+        stretchFactor: Double = 1,
+        orbitRadius: CGFloat = 0,
+        orbitAngularSpeed: CGFloat = .pi,
+        orbitInitialAngle: CGFloat = -.pi / 2,
+        colorVariation: Double = 0,
+        opacityVariation: Double = 0
     ) {
         self.tags = tags
         self.secondarySystems = secondarySystems
@@ -279,6 +310,8 @@ public class VortexSystem: Codable, Identifiable, Equatable, Hashable {
         self.lifespanVariation = lifespanVariation
         self.speed = speed
         self.speedVariation = speedVariation
+        self.speedDistribution = speedDistribution
+        self.speedFromMotion = speedFromMotion
         self.angle = angle
         self.acceleration = acceleration
         self.angleRange = angleRange
@@ -290,8 +323,14 @@ public class VortexSystem: Codable, Identifiable, Equatable, Hashable {
         self.colors = colors
         self.size = size
         self.sizeVariation = sizeVariation
-        self.sizeMultiplierAtDeath = sizeMultiplierAtDeath
+        self.sizeOverLife = sizeOverLife
+        self.opacityOverLife = opacityOverLife
         self.stretchFactor = stretchFactor
+        self.orbitRadius = orbitRadius
+        self.orbitAngularSpeed = orbitAngularSpeed
+        self.orbitInitialAngle = orbitInitialAngle
+        self.colorVariation = colorVariation
+        self.opacityVariation = opacityVariation
 
         if case let .randomRamp(allColors) = colors {
             selectedColorRamp = Int.random(in: 0..<allColors.count)
@@ -318,6 +357,8 @@ public class VortexSystem: Codable, Identifiable, Equatable, Hashable {
             lifespanVariation: lifespanVariation,
             speed: speed,
             speedVariation: speedVariation,
+            speedDistribution: speedDistribution,
+            speedFromMotion: speedFromMotion,
             angle: angle,
             angleRange: angleRange,
             acceleration: acceleration,
@@ -329,8 +370,14 @@ public class VortexSystem: Codable, Identifiable, Equatable, Hashable {
             colors: colors,
             size: size,
             sizeVariation: sizeVariation,
-            sizeMultiplierAtDeath: sizeMultiplierAtDeath,
-            stretchFactor: stretchFactor
+            sizeOverLife: sizeOverLife,
+            opacityOverLife: opacityOverLife,
+            stretchFactor: stretchFactor,
+            orbitRadius: orbitRadius,
+            orbitAngularSpeed: orbitAngularSpeed,
+            orbitInitialAngle: orbitInitialAngle,
+            colorVariation: colorVariation,
+            opacityVariation: opacityVariation
         )
     }
 }

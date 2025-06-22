@@ -14,6 +14,8 @@ public struct VortexView<Symbols>: View where Symbols: View {
 
     /// The primary system this is responsible for drawing.
     @State private var particleSystem: VortexSystem
+    
+    @State private var startDate: Date = .now
 
     /// The ideal frame rate for updating particles. Using lower frame rates saves CPU time.
     public var targetFrameRate: Int
@@ -21,6 +23,8 @@ public struct VortexView<Symbols>: View where Symbols: View {
     public var body: some View {
         TimelineView(.animation(minimumInterval: 1 / Double(targetFrameRate))) { timeline in
             Canvas { context, size in
+                particleSystem.position = systemPosition(timeLineDate: timeline.date, drawSize: size)
+                
                 particleSystem.update(date: timeline.date, drawSize: size)
                 draw(particleSystem, into: context, at: size)
             } symbols: {
@@ -28,6 +32,9 @@ public struct VortexView<Symbols>: View where Symbols: View {
             }
         }
         .preference(key: VortexSystemPreferenceKey.self, value: particleSystem)
+        .onAppear {
+            startDate = .now
+        }
     }
 
     /// Creates a new VortexView from a pre-configured particle system, along with all the SwiftUI
@@ -69,9 +76,8 @@ public struct VortexView<Symbols>: View where Symbols: View {
                 continue
             }
 
-            // Calculate position in screen space.
-            let xPos = particle.position.x * size.width
-            let yPos = particle.position.y * size.height
+            let xPos = particle.position.x
+            let yPos = particle.position.y
 
             // Bail out early if this particle has moved off the screen.
             // This largely seems to avoid an annoying SwiftUI render
@@ -116,5 +122,15 @@ public struct VortexView<Symbols>: View where Symbols: View {
         for secondarySystem in particleSystem.activeSecondarySystems {
             draw(secondarySystem, into: context, at: size)
         }
+    }
+    
+    private func systemPosition(timeLineDate: Date, drawSize: CGSize) -> SIMD2<Double> {
+        let elapsed = timeLineDate.timeIntervalSince(startDate)
+        let angle = particleSystem.orbitAngularSpeed * CGFloat(elapsed) + particleSystem.orbitInitialAngle
+        
+        let xPos = drawSize.width / 2 + particleSystem.orbitRadius * cos(angle)
+        let yPos = drawSize.height / 2 + particleSystem.orbitRadius * sin(angle)
+        
+        return [xPos, yPos]
     }
 }

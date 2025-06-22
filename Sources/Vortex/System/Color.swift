@@ -110,5 +110,53 @@ extension VortexSystem {
             copy.opacity = self.opacity * opacity
             return copy
         }
+        
+        /// Returns a new color with randomized color and opacity variations applied.
+        /// If both variations are zero or negative, the original color is returned unchanged.
+        /// - Parameters:
+        ///   - colorVariation: Controls RGB variation (0 = no change). Recommended small values like 0.05 ~ 0.1.
+        ///   - opacityVariation: Controls opacity variation toward 1 (0 = no change). Final opacity will stay in [1 - opacityVariation, 1].
+        public func randomized(
+            colorVariation: Double,
+            opacityVariation: Double
+        ) -> VortexSystem.Color {
+            // Skip if no variations
+            if colorVariation <= 0 && opacityVariation <= 0 {
+                return self
+            }
+            
+            // Color variation (simple scaling around 1)
+            let colorFactor: Double
+            if colorVariation > 0 {
+                colorFactor = 1.0 + Double.random(in: -colorVariation...colorVariation)
+            } else {
+                colorFactor = 1.0
+            }
+
+            let newRed = (red * colorFactor).clamped01()
+            let newGreen = (green * colorFactor).clamped01()
+            let newBlue = (blue * colorFactor).clamped01()
+            
+            let newOpacity: Double
+            if opacityVariation > 0 {
+                let minOpacity = (1.0 - opacityVariation)
+                newOpacity = (Double.random(in: minOpacity...1.0) * opacity).clamped01()
+            } else {
+                newOpacity = opacity
+            }
+
+            return VortexSystem.Color(
+                red: newRed,
+                green: newGreen,
+                blue: newBlue,
+                opacity: newOpacity
+            )
+        }
+    }
+}
+
+private extension Double {
+    func clamped01() -> Double {
+        min(max(self, 0), 1)
     }
 }
